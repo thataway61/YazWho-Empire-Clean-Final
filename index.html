@@ -2,36 +2,102 @@
 <html>
 <head>
     <title>YazWho Empire v2.0.0</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #7c3aed, #1e40af, #4338ca);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
+        body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #7c3aed, #1e40af); display: flex; align-items: center; justify-content: center; color: white; font-family: Arial; }
+        .container { text-align: center; max-width: 800px; }
         h1 { font-size: 3rem; margin-bottom: 1rem; }
-        p { font-size: 1.5rem; margin-bottom: 2rem; }
-        .card {
-            background: rgba(0,0,0,0.3);
-            padding: 2rem;
-            border-radius: 12px;
-            border: 1px solid rgba(124,58,237,0.5);
-        }
+        .card { background: rgba(0,0,0,0.3); padding: 2rem; margin: 1rem; border-radius: 12px; border: 1px solid rgba(124,58,237,0.5); }
+        .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .metric { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; }
+        button { background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 0.5rem; }
     </style>
 </head>
 <body>
-    <div>
-        <h1>👑 YazWho Empire v2.0.0</h1>
-        <p>Empire Dashboard is LIVE!</p>
-        <div class="card">
-            <p>🚀 Static HTML - No Build Errors!</p>
-            <p>Backend ready for connection</p>
-        </div>
-    </div>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        function EmpireApp() {
+            const [status, setStatus] = useState(null);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                fetch('https://musicjam-backend.onrender.com/api/empire/overview')
+                    .then(res => res.json())
+                    .then(data => {
+                        setStatus(data);
+                        setLoading(false);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        setLoading(false);
+                    });
+            }, []);
+            
+            const generateEnhancement = () => {
+                fetch('https://musicjam-backend.onrender.com/api/ai/musicjam/enhance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        musicjam_feature: 'playlist-management',
+                        enhancement_type: 'recommendation'
+                    })
+                })
+                .then(res => res.json())
+                .then(data => alert('🤖 AI Enhancement Generated!'))
+                .catch(err => alert('Enhancement failed'));
+            };
+            
+            if (loading) return <div className="container"><h1>👑 Loading Empire...</h1></div>;
+            
+            return (
+                <div className="container">
+                    <h1>👑 YazWho Empire v2.0.0</h1>
+                    <p style={{fontSize: '1.5rem', marginBottom: '2rem'}}>Empire Dashboard - LIVE & Connected!</p>
+                    
+                    {status && (
+                        <div className="status">
+                            <div className="metric">
+                                <h3>Empire Status</h3>
+                                <div style={{fontSize: '1.5rem', color: status.empire_status === 'operational' ? '#10b981' : '#ef4444'}}>
+                                    {status.empire_status === 'operational' ? '🟢 Online' : '🔴 Offline'}
+                                </div>
+                            </div>
+                            <div className="metric">
+                                <h3>MusicJam</h3>
+                                <div style={{fontSize: '1.5rem', color: '#10b981'}}>
+                                    🎵 {status.musicjam_app?.status || 'Active'}
+                                </div>
+                            </div>
+                            <div className="metric">
+                                <h3>Projects</h3>
+                                <div style={{fontSize: '1.5rem', color: '#3b82f6'}}>
+                                    📁 {status.managed_projects || 0}
+                                </div>
+                            </div>
+                            <div className="metric">
+                                <h3>AI Enhancements</h3>
+                                <div style={{fontSize: '1.5rem', color: '#ec4899'}}>
+                                    🤖 {status.ai_enhancements || 0}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="card">
+                        <h3>🤖 AI Control Panel</h3>
+                        <button onClick={generateEnhancement}>Generate Enhancement</button>
+                        <button onClick={() => window.open('https://musicjam.yazwho.com')}>Visit MusicJam</button>
+                        <button onClick={() => alert('🚀 Deployment initiated!')}>Deploy Project</button>
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<EmpireApp />, document.getElementById('root'));
+    </script>
 </body>
 </html>
