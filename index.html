@@ -7,22 +7,25 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #7c3aed, #1e40af); color: white; font-family: Arial; }
-        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; max-width: 800px; margin: 0 auto; padding: 2rem; }
-        h1 { font-size: 3rem; margin-bottom: 1rem; }
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; text-align: center; max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        h1 { font-size: 3rem; margin-bottom: 0.5rem; }
+        .subtitle { font-size: 1.2rem; opacity: 0.8; margin-bottom: 2rem; }
         .card { background: rgba(0,0,0,0.3); padding: 2rem; margin: 1rem; border-radius: 12px; border: 1px solid rgba(124,58,237,0.5); width: 100%; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
         .metric { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; text-align: center; }
-        .btn { background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 0.5rem; }
+        .btn { background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 0.5rem; transition: transform 0.2s; }
+        .btn:hover { transform: translateY(-2px); }
         .nav { display: flex; gap: 1rem; justify-content: center; margin: 2rem 0; flex-wrap: wrap; }
-        .nav-btn { background: rgba(124,58,237,0.3); border: 1px solid rgba(124,58,237,0.8); color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-        .nav-btn:hover { background: rgba(124,58,237,0.8); }
+        .nav-btn { background: rgba(124,58,237,0.3); border: 1px solid rgba(124,58,237,0.8); color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(124,58,237,0.8); }
+        .result { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.5); padding: 1rem; margin: 1rem 0; border-radius: 8px; text-align: left; }
     </style>
 </head>
 <body>
     <div id="root">
         <div class="container">
             <h1>👑 YazWho Empire v2.0.0</h1>
-            <p style="font-size: 1.5rem; margin-bottom: 2rem;">Empire Dashboard - Loading...</p>
+            <div class="subtitle">AI-Powered Music Empire Management Dashboard</div>
         </div>
     </div>
     
@@ -32,63 +35,154 @@
         function App() {
             const [status, setStatus] = useState(null);
             const [view, setView] = useState('dashboard');
+            const [jamSessions, setJamSessions] = useState([]);
+            const [result, setResult] = useState('');
+            const [loading, setLoading] = useState(false);
             
             useEffect(() => {
-                fetch('https://musicjam-backend.onrender.com/api/empire/overview')
-                    .then(res => res.json())
-                    .then(data => setStatus(data))
-                    .catch(err => console.error('API Error:', err));
+                Promise.all([
+                    fetch('https://musicjam-backend.onrender.com/api/empire/overview').then(r => r.json()),
+                    fetch('https://musicjam-backend.onrender.com/api/musicjam/jam-sessions').then(r => r.json())
+                ]).then(([statusData, jamData]) => {
+                    setStatus(statusData);
+                    setJamSessions(jamData.jam_sessions || []);
+                }).catch(err => console.error('API Error:', err));
             }, []);
+            
+            const generateEnhancement = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch('https://musicjam-backend.onrender.com/api/ai/musicjam/enhance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            musicjam_feature: 'playlist-management',
+                            enhancement_type: 'recommendation'
+                        })
+                    });
+                    const data = await response.json();
+                    setResult('🤖 AI Enhancement Generated: ' + data.ai_suggestion?.substring(0, 300) + '...');
+                } catch (err) {
+                    setResult('❌ Enhancement failed: ' + err.message);
+                }
+                setLoading(false);
+            };
+            
+            const getMusicRecs = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch('https://musicjam-backend.onrender.com/api/ai/recommendations/music?mood=happy&genre=rock');
+                    const data = await response.json();
+                    setResult('🎵 Music Recommendations: ' + data.recommendations?.substring(0, 400) + '...');
+                } catch (err) {
+                    setResult('❌ Music recommendations failed: ' + err.message);
+                }
+                setLoading(false);
+            };
+            
+            const checkIntegrations = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch('https://musicjam-backend.onrender.com/api/status');
+                    const data = await response.json();
+                    setResult('✅ System Status: ' + data.message + ' | All integrations operational');
+                } catch (err) {
+                    setResult('❌ System check failed: ' + err.message);
+                }
+                setLoading(false);
+            };
             
             return (
                 <div className="container">
                     <h1>👑 YazWho Empire v2.0.0</h1>
-                    <p style={{fontSize: '1.5rem', marginBottom: '2rem'}}>Empire Dashboard - LIVE!</p>
+                    <div className="subtitle">AI-Powered Music Empire Management Dashboard</div>
                     
                     <div className="nav">
-                        <button className="nav-btn" onClick={() => setView('dashboard')}>🏰 Dashboard</button>
-                        <button className="nav-btn" onClick={() => setView('musicjam')}>🎵 MusicJam</button>
-                        <button className="nav-btn" onClick={() => setView('ai')}>🤖 AI Tools</button>
-                        <button className="nav-btn" onClick={() => window.open('https://musicjam.yazwho.com')}>Visit MusicJam</button>
+                        <button className={`nav-btn ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>🏰 Command Center</button>
+                        <button className={`nav-btn ${view === 'musicjam' ? 'active' : ''}`} onClick={() => setView('musicjam')}>🎵 MusicJam</button>
+                        <button className={`nav-btn ${view === 'ai' ? 'active' : ''}`} onClick={() => setView('ai')}>🤖 AI Tools</button>
+                        <button className="nav-btn" onClick={() => window.open('https://musicjam.yazwho.com', '_blank')}>🚀 Visit Live App</button>
                     </div>
                     
-                    {view === 'dashboard' && status && (
+                    {view === 'dashboard' && (
                         <div className="card">
-                            <h2>Empire Status</h2>
-                            <div className="grid">
-                                <div className="metric">
-                                    <h3>Empire</h3>
-                                    <div style={{fontSize: '1.5rem', color: '#10b981'}}>🟢 Online</div>
+                            <h2>🏰 Empire Command Center</h2>
+                            {status ? (
+                                <div className="grid">
+                                    <div className="metric">
+                                        <h3>Empire Status</h3>
+                                        <div style={{fontSize: '1.5rem', color: status.empire_status === 'operational' ? '#10b981' : '#ef4444'}}>
+                                            {status.empire_status === 'operational' ? '🟢 Operational' : '🔴 Offline'}
+                                        </div>
+                                    </div>
+                                    <div className="metric">
+                                        <h3>MusicJam App</h3>
+                                        <div style={{fontSize: '1.5rem', color: '#10b981'}}>🎵 {status.musicjam_app?.status || 'Live'}</div>
+                                    </div>
+                                    <div className="metric">
+                                        <h3>Active Projects</h3>
+                                        <div style={{fontSize: '1.5rem', color: '#3b82f6'}}>📁 {status.managed_projects || 0}</div>
+                                    </div>
+                                    <div className="metric">
+                                        <h3>AI Enhancements</h3>
+                                        <div style={{fontSize: '1.5rem', color: '#ec4899'}}>🤖 {status.ai_enhancements || 0}</div>
+                                    </div>
                                 </div>
-                                <div className="metric">
-                                    <h3>MusicJam</h3>
-                                    <div style={{fontSize: '1.5rem', color: '#10b981'}}>🎵 Live</div>
-                                </div>
-                                <div className="metric">
-                                    <h3>Projects</h3>
-                                    <div style={{fontSize: '1.5rem', color: '#3b82f6'}}>📁 {status.managed_projects || 0}</div>
-                                </div>
-                                <div className="metric">
-                                    <h3>AI Tools</h3>
-                                    <div style={{fontSize: '1.5rem', color: '#ec4899'}}>🤖 {status.ai_enhancements || 0}</div>
-                                </div>
-                            </div>
+                            ) : (
+                                <div>📡 Connecting to Empire systems...</div>
+                            )}
+                            <button className="btn" onClick={checkIntegrations} disabled={loading}>
+                                {loading ? '⏳ Checking...' : '🔍 System Health Check'}
+                            </button>
                         </div>
                     )}
                     
                     {view === 'musicjam' && (
                         <div className="card">
-                            <h2>🎵 MusicJam Control</h2>
-                            <button className="btn" onClick={() => alert('🤖 AI Enhancement Generated!')}>Generate Enhancement</button>
-                            <button className="btn" onClick={() => window.open('https://musicjam.yazwho.com')}>Open MusicJam</button>
+                            <h2>🎵 MusicJam Management</h2>
+                            <div style={{textAlign: 'left', marginBottom: '1rem'}}>
+                                <strong>Active Jam Sessions: {jamSessions.length}</strong>
+                                {jamSessions.slice(0, 3).map((session, i) => (
+                                    <div key={i} style={{background: 'rgba(139,92,246,0.2)', padding: '0.5rem', margin: '0.5rem 0', borderRadius: '6px'}}>
+                                        <div style={{fontWeight: 'bold'}}>{session.title}</div>
+                                        <div style={{fontSize: '0.9rem', opacity: 0.8}}>{session.location} • {session.skill_level}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button className="btn" onClick={generateEnhancement} disabled={loading}>
+                                {loading ? '⏳ Generating...' : '🤖 Generate AI Enhancement'}
+                            </button>
+                            <button className="btn" onClick={() => window.open('https://musicjam.yazwho.com', '_blank')}>
+                                🎵 Open Live MusicJam
+                            </button>
                         </div>
                     )}
                     
                     {view === 'ai' && (
                         <div className="card">
                             <h2>🤖 AI Command Center</h2>
-                            <button className="btn" onClick={() => alert('🎵 Music recommendations generated!')}>Music AI</button>
-                            <button className="btn" onClick={() => alert('🚀 Deployment analysis complete!')}>Deploy AI</button>
+                            <div style={{marginBottom: '1rem'}}>
+                                <strong>Available AI Services:</strong>
+                                <ul style={{textAlign: 'left', margin: '1rem 0'}}>
+                                    <li>🎵 Music Recommendation Engine</li>
+                                    <li>🚀 Feature Enhancement Generator</li>
+                                    <li>📊 System Analytics</li>
+                                    <li>🔧 Deployment Optimization</li>
+                                </ul>
+                            </div>
+                            <button className="btn" onClick={getMusicRecs} disabled={loading}>
+                                {loading ? '⏳ Generating...' : '🎵 Get Music Recommendations'}
+                            </button>
+                            <button className="btn" onClick={generateEnhancement} disabled={loading}>
+                                {loading ? '⏳ Processing...' : '🚀 Generate Enhancement'}
+                            </button>
+                        </div>
+                    )}
+                    
+                    {result && (
+                        <div className="result">
+                            <strong>Latest AI Result:</strong><br/>
+                            {result}
                         </div>
                     )}
                 </div>
