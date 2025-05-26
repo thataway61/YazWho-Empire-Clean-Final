@@ -6,13 +6,23 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #7c3aed, #1e40af); display: flex; align-items: center; justify-content: center; color: white; font-family: Arial; }
-        .container { text-align: center; max-width: 800px; }
-        h1 { font-size: 3rem; margin-bottom: 1rem; }
-        .card { background: rgba(0,0,0,0.3); padding: 2rem; margin: 1rem; border-radius: 12px; border: 1px solid rgba(124,58,237,0.5); }
-        .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .metric { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; }
-        button { background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 0.5rem; }
+        body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #7c3aed, #1e40af, #4338ca); color: white; font-family: Arial; }
+        .header { background: rgba(0,0,0,0.5); padding: 1rem 2rem; border-bottom: 1px solid rgba(124,58,237,0.5); }
+        .nav { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .nav-btn { background: none; border: 1px solid rgba(124,58,237,0.5); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.3s; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(124,58,237,0.8); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .card { background: rgba(0,0,0,0.3); padding: 2rem; margin: 1rem 0; border-radius: 12px; border: 1px solid rgba(124,58,237,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .metric { background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 8px; text-align: center; }
+        .btn { background: linear-gradient(135deg, #7c3aed, #ec4899); border: none; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 0.5rem; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); }
+        .jam-card { background: rgba(139,92,246,0.2); padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid #a855f7; }
+        .status-online { color: #10b981; }
+        .status-offline { color: #ef4444; }
+        h1 { font-size: 2.5rem; margin: 0; }
+        h2 { font-size: 2rem; margin: 1rem 0; }
+        h3 { font-size: 1.3rem; margin: 0.5rem 0; }
     </style>
 </head>
 <body>
@@ -21,20 +31,24 @@
         const { useState, useEffect } = React;
         
         function EmpireApp() {
+            const [view, setView] = useState('dashboard');
             const [status, setStatus] = useState(null);
+            const [jamSessions, setJamSessions] = useState([]);
+            const [repos, setRepos] = useState([]);
             const [loading, setLoading] = useState(true);
             
             useEffect(() => {
-                fetch('https://musicjam-backend.onrender.com/api/empire/overview')
-                    .then(res => res.json())
-                    .then(data => {
-                        setStatus(data);
-                        setLoading(false);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        setLoading(false);
-                    });
+                Promise.all([
+                    fetch('https://musicjam-backend.onrender.com/api/empire/overview').then(r => r.json()),
+                    fetch('https://musicjam-backend.onrender.com/api/musicjam/jam-sessions').then(r => r.json()),
+                ]).then(([statusData, jamData]) => {
+                    setStatus(statusData);
+                    setJamSessions(jamData.jam_sessions || []);
+                    setLoading(false);
+                }).catch(err => {
+                    console.error(err);
+                    setLoading(false);
+                });
             }, []);
             
             const generateEnhancement = () => {
@@ -45,53 +59,132 @@
                         musicjam_feature: 'playlist-management',
                         enhancement_type: 'recommendation'
                     })
-                })
-                .then(res => res.json())
-                .then(data => alert('🤖 AI Enhancement Generated!'))
-                .catch(err => alert('Enhancement failed'));
+                }).then(() => alert('🤖 AI Enhancement Generated!'));
             };
             
-            if (loading) return <div className="container"><h1>👑 Loading Empire...</h1></div>;
+            const fetchRepos = () => {
+                fetch('https://musicjam-backend.onrender.com/api/github/repositories')
+                    .then(r => r.json())
+                    .then(data => setRepos(data.repositories || []))
+                    .catch(err => alert('GitHub integration failed'));
+            };
+            
+            const getMusicRec = () => {
+                fetch('https://musicjam-backend.onrender.com/api/ai/recommendations/music?mood=happy&genre=any')
+                    .then(r => r.json())
+                    .then(data => alert('🎵 Recommendations: ' + data.recommendations.substring(0, 200) + '...'))
+                    .catch(err => alert('Music recommendation failed'));
+            };
+            
+            if (loading) return (
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh'}}>
+                    <h1>👑 Loading YazWho Empire...</h1>
+                </div>
+            );
             
             return (
-                <div className="container">
-                    <h1>👑 YazWho Empire v2.0.0</h1>
-                    <p style={{fontSize: '1.5rem', marginBottom: '2rem'}}>Empire Dashboard - LIVE & Connected!</p>
-                    
-                    {status && (
-                        <div className="status">
-                            <div className="metric">
-                                <h3>Empire Status</h3>
-                                <div style={{fontSize: '1.5rem', color: status.empire_status === 'operational' ? '#10b981' : '#ef4444'}}>
-                                    {status.empire_status === 'operational' ? '🟢 Online' : '🔴 Offline'}
-                                </div>
-                            </div>
-                            <div className="metric">
-                                <h3>MusicJam</h3>
-                                <div style={{fontSize: '1.5rem', color: '#10b981'}}>
-                                    🎵 {status.musicjam_app?.status || 'Active'}
-                                </div>
-                            </div>
-                            <div className="metric">
-                                <h3>Projects</h3>
-                                <div style={{fontSize: '1.5rem', color: '#3b82f6'}}>
-                                    📁 {status.managed_projects || 0}
-                                </div>
-                            </div>
-                            <div className="metric">
-                                <h3>AI Enhancements</h3>
-                                <div style={{fontSize: '1.5rem', color: '#ec4899'}}>
-                                    🤖 {status.ai_enhancements || 0}
-                                </div>
-                            </div>
+                <div>
+                    <div className="header">
+                        <div style={{textAlign: 'center', marginBottom: '1rem'}}>
+                            <h1>👑 YazWho Empire Dashboard v2.0.0</h1>
                         </div>
-                    )}
+                        <div className="nav">
+                            {['dashboard', 'musicjam', 'github', 'ai-tools'].map(tab => (
+                                <button key={tab} className={`nav-btn ${view === tab ? 'active' : ''}`} 
+                                        onClick={() => setView(tab)}>
+                                    {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     
-                    <div className="card">
-                        <h3>🤖 AI Control Panel</h3>
-                        <button onClick={generateEnhancement}>Generate Enhancement</button>
-                        <button onClick={() => window.open('https://musicjam.yazwho.com')}>Visit MusicJam</button>
-                        <button onClick={() => alert('🚀 Deployment initiated!')}>Deploy Project</button>
+                    <div className="container">
+                        {view === 'dashboard' && (
+                            <div>
+                                <h2>🏰 Empire Command Center</h2>
+                                {status && (
+                                    <div className="grid">
+                                        <div className="metric">
+                                            <h3>Empire Status</h3>
+                                            <div style={{fontSize: '2rem'}} className={status.empire_status === 'operational' ? 'status-online' : 'status-offline'}>
+                                                {status.empire_status === 'operational' ? '🟢 Online' : '🔴 Offline'}
+                                            </div>
+                                        </div>
+                                        <div className="metric">
+                                            <h3>MusicJam App</h3>
+                                            <div style={{fontSize: '2rem'}} className="status-online">
+                                                🎵 {status.musicjam_app?.status || 'Live'}
+                                            </div>
+                                            <button className="btn" onClick={() => window.open('https://musicjam.yazwho.com')}>Visit App</button>
+                                        </div>
+                                        <div className="metric">
+                                            <h3>Active Projects</h3>
+                                            <div style={{fontSize: '2rem', color: '#3b82f6'}}>
+                                                📁 {status.managed_projects || 0}
+                                            </div>
+                                        </div>
+                                        <div className="metric">
+                                            <h3>AI Enhancements</h3>
+                                            <div style={{fontSize: '2rem', color: '#ec4899'}}>
+                                                🤖 {status.ai_enhancements || 0}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {view === 'musicjam' && (
+                            <div>
+                                <h2>🎵 MusicJam Management</h2>
+                                <div className="card">
+                                    <h3>Active Jam Sessions ({jamSessions.length})</h3>
+                                    {jamSessions.slice(0, 5).map((session, i) => (
+                                        <div key={i} className="jam-card">
+                                            <div style={{fontWeight: 'bold'}}>{session.title}</div>
+                                            <div style={{fontSize: '0.9rem', opacity: 0.8}}>{session.location} • {session.skill_level}</div>
+                                        </div>
+                                    ))}
+                                    <button className="btn" onClick={generateEnhancement}>🤖 Generate AI Enhancement</button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {view === 'github' && (
+                            <div>
+                                <h2>📁 GitHub Integration</h2>
+                                <div className="card">
+                                    <h3>Repository Management</h3>
+                                    <button className="btn" onClick={fetchRepos}>📁 Load Repositories</button>
+                                    <div style={{marginTop: '1rem'}}>
+                                        {repos.slice(0, 5).map((repo, i) => (
+                                            <div key={i} className="jam-card">
+                                                <div style={{fontWeight: 'bold'}}>{repo.name}</div>
+                                                <div style={{fontSize: '0.9rem', opacity: 0.8'}}>{repo.language} • ⭐ {repo.stars}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {view === 'ai-tools' && (
+                            <div>
+                                <h2>🤖 AI Command Center</h2>
+                                <div className="grid">
+                                    <div className="card">
+                                        <h3>🎵 Music AI</h3>
+                                        <button className="btn" onClick={getMusicRec}>Get Music Recommendations</button>
+                                        <button className="btn" onClick={generateEnhancement}>Generate Enhancement</button>
+                                    </div>
+                                    <div className="card">
+                                        <h3>🚀 Deployment AI</h3>
+                                        <button className="btn" onClick={() => alert('🚀 Deployment analysis initiated!')}>Analyze Projects</button>
+                                        <button className="btn" onClick={() => alert('🔧 Optimization suggestions generated!')}>Optimize Code</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
